@@ -1,1 +1,212 @@
+Project -4: EEG_SIGNAL_VISUALIZER/ANALYZER
+this project will simulate,load and  analyze a EEG signal.
+it will test the gui by simulating its own eeg signal so it will still work if the user does not have a eeg signal to uplaod.
+it will also give the user the option to upload there own EEG Signal.
+it will analize the loaded EEG Signal for brain activity.
+ Part - 1 the main function that contains the entier GUI:
+% the main function that contains the entier GUI:
+
+function eeg_signal_analyzer_gui()
+f = figure("Name","eeg_signal_analyzer_gui","Position",[150,100,1200,800]);
+Part -2:  the axes for plotting 
+% ax1: will plot the Simulated EEG and Loaded EEG but not at the same time
+% but both will be plotted on the same axis that ax1.
+
+% when the user presses the the simulate EEG : matlab will generate its own
+% eeg and then plot that to test if the GUI actual works.
+
+% when the user goes for the Load EEg it will give the user to chose a file
+% from the dropdown and then plot that signal in  ax1.
+
+% ax2 will display brain wave power bar chart.Because the analysis result is not another time-domain signal, but a bar graph showing how much power each frequency band has.
+% This is important because:
+%EEG is all about frequency content, so you need to see which band dominates.
+
+
+ ax1 = axes('Parent',f,'Units','pixels','Position',[80,500,400,250]);
+    title(ax1,'EEG Signal (Time Domain)');
+    xlabel(ax1,'Time (s)'); 
+    ylabel(ax1,'Amplitude (\muV)');
+
+ ax2 = axes('Parent',f,'Units','pixels','Position',[600,500,400,250]);
+    title(ax2,'Brain Wave Power'); 
+    ylabel(ax2,'Power');
+one of the key componenets of the UI components is that i want to be able to display the dominant wave so analyze the state of the brain.
+Part-3 : UI components
+     % ----------------- Text for Dominant Wave -----------------
+    dominantText = uicontrol('Style','text','Parent',f,...
+        'Position',[450 400 250 50],'FontSize',12,...
+        'String','Dominant Brain Wave: None');
+
+    % ----------------- Buttons -----------------
+    btnSim = uicontrol('Style','pushbutton','Parent',f,'String','Simulate EEG',....
+        'Position',[400 360 120 40],'FontSize',10,...
+        'Callback',@simulateEEG);
+
+    btnLoad = uicontrol('Style','pushbutton','Parent',f,'String','Load EEG File',...
+        'Position',[550 360 120 40],'FontSize',10,...
+        'Callback',@loadEEG);
+
+    btnAnalyze = uicontrol('Style','pushbutton','Parent',f,'String','Analyze Brain Waves',...
+        'Position',[690 360 160 40],'FontSize',10,...
+        'Callback',@analyzeEEG);
+    
+Part -4: the variable neede to store the EEG signal and the Fs
+     % ----------------- Data Variables -----------------
+    eeg_signal = [];
+    fs = 256; % Default sampling frequency (updated when loading file)
+    
+%Why 256 Hz?
+%EEG signals contain useful information mostly between 0.5 Hz and ~50 Hz.
+A%ccording to the Nyquist theorem, the sampling frequency must be at least 2 × highest frequency.
+%If the highest brain wave frequency is Gamma (~45 Hz):
+%Minimum required = 2 × 45 = 90 Hz.
+%In practice, EEG systems use 128 Hz, 256 Hz, 512 Hz, or 1024 Hz to:
+%Avoid aliasing.
+%Get better resolution for analysis.
+Part -5: callbacks for all the buttons:
+%call back for simulating matlabs own EEG FUNCTION:
+
+ % ----------------- Callback: Simulate EEG -----------------
+function simulateEEG(~,~)
+
+% time vector:
+t = 0:1/fs:10;
+
+        % to to detect the different waves :
+        delta_wave = 30*sin(2*pi*2*t);      % Delta: 2 Hz
+        theta_wave = 20*sin(2*pi*6*t);      % Theta: 6 Hz
+        alpha_wave = 50*sin(2*pi*10*t);     % Alpha: 10 Hz (dominant: we have set it to be the dominant one to simulate a real EEG )
+        beta_wave  = 10*sin(2*pi*20*t);     % Beta: 20 Hz
+        gamma_wave = 5*sin(2*pi*35*t);      % Gamma: 35 Hz
+
+        % to simulate the EEG Signal we need to add noise:
+        noise = 5*randn(size(t));           % Random noise
+        %dominantText,'String','Dominant Brain Wave: None'
+        %So, it produces values like -1.2, 0.5, 0.9, ... randomly.
+        %size(t) → Makes sure the noise has the same length as the EEG signal.
+        %5*randn(...) → Scales the noise by 5 µV so it has a realistic amplitude.
+
+       
+
+% the entier eeg signal so that we can plot this on ax1:
+        eeg_signal = delta_wave + theta_wave + alpha_wave + beta_wave + gamma_wave+ noise;
+
+        %plot:
+        plot(ax1,t,eeg_signal)
+        title(ax1,'Simulated EEG Signal');
+        xlabel(ax1,'Time (s)');
+        ylabel(ax1,'Amplitude (\muV)');
+        grid(ax1,'on');
+
+        set(dominantText,'String','Dominant Brain Wave: None')
+end
+
+% ----------------- Callback: Load EEG -----------------
+
+    function loadEEG(~,~)
+
+         [file,path] = uigetfile({'*.mat;*.csv','EEG Files (*.mat, *.csv)'}, 'Select EEG File');
+
+         if file == 0
+             return
+         end
+         
+ % i have allowed matlab to let the user select 2 file types a .mat and a
+ % .csv file.
+ % both files need to be processed in a different way. 
+
+ % filepart() : this function gives us 3 major compotent of a mat file 
+  % 1. the path
+  %2. the name
+  % 3. extention - .mat or.csv 
+
+  % we only need the extention the other to are not of use at the moment.
+  % mat files will have 2 variables the signal and the Fs
+  % when we get a siganl we need to check if its empty or not and if its
+  % not does it  has to load the signal and check if it have the 2 important variabels and store them in two
+  % variables so that we can use them.
+
+  %-------------- if it a .mat file ----------------------------
+   [~,~,ext] = fileparts(file);
+
+      if strcmp(ext,".mat")
+
+     data = load(fullfile(file,path)); % if the file is  a mat file load the data.
+
+     if isfield (data,"EEG") %check if the data has a eeg signal
+         eeg_signal = data.EEG;% if it has a eeg signal save it in the variabel eeg_signal.
+     else
+         errordlg("EEG data not found in .mat file","ERROR!")% if it done not have a eeg signal then display a error message.
+     
+     end
+     if isfield(data.fs)
+         fs = data.fs; % if there is a Fe Variable then save it / if it does not then set a default value 
+     else
+         fs = 256; % the default setting
+     end
+      end
+
+
+      %plot:
+       t = (0:length(eeg_signal)-1)/fs;
+            plot(ax1,t,eeg_signal);
+            title(ax1,'Loaded EEG Signal');
+            xlabel(ax1,'Time (s)'); ylabel(ax1,'Amplitude (\muV)');
+            grid(ax1,'on');
+
+
+%-----------------if its a .csv file--------------------
+if strcmp(ext,".csv")
+
+    eeg_data = readmatrix(fullfile(file,path));
+% in this readmatrix() it takes the .csv which is of matrix form which has
+% two columns the first one is time the secand one is the eeg signal so we
+% only want the secand column but all the rows so we use ee_data =(:,end)
+% =
+        eeg_signal = eeg_data(:,end); % Assuming last column is EEG
+        fs = 256; % Default
+
+        %Plot:
+        t = (0:length(eeg_signal)-1)/fs;
+            plot(ax1,t,eeg_signal);
+            title(ax1,'Loaded EEG Signal');
+            xlabel(ax1,'Time (s)'); ylabel(ax1,'Amplitude (\muV)');
+            grid(ax1,'on');
+        end
+        set(dominantText,'String','Dominant Brain Wave: None');
+    end
+
+
+ % ----------------- Callback: Analyze EEG Brain Wave Analysis -----------------
+    function analyzeEEG(~,~)
+        if isempty(eeg_signal)
+            errordlg('Please load or simulate EEG signal first.','Error');
+            return;
+        end
+
+        % Define brain wave bands
+        bands = {'Delta','Theta','Alpha','Beta','Gamma'};
+        freq_ranges = [0.5 4; 4 8; 8 13; 13 30; 30 45];
+        band_powers = zeros(1,5);
+
+        % Compute power in each band
+        for i = 1:5
+            band_powers(i) = bandpower(eeg_signal, fs, freq_ranges(i,:));
+        end
+
+        % Find dominant brain wave
+        [~, idx] = max(band_powers);
+        dominant_band = bands{idx};
+
+        % Plot bar graph
+        bar(ax2,band_powers);
+        set(ax2,'XTickLabel',bands);
+        ylabel(ax2,'Power'); title(ax2,'Brain Wave Power Distribution');
+        grid(ax2,'on');
+
+        % Display dominant band
+        set(dominantText,'String',['Dominant Brain Wave: ' dominant_band]);
+    end
+    end
 
