@@ -24,6 +24,7 @@ This MATLAB project loads and visualizes EEG signals, providing an interface to 
 
 ## Screenshots
 ![EEG GUI] 
+https://github.com/shirel-zoe/EEG-Signal-Visualizer-Brain-Activity-Analyzer/blob/main/Screenshot%202025-08-06%20141509.png
 
 
 ## Future Improvements
